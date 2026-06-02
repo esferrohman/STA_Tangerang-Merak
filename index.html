@@ -1,141 +1,684 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-<title>GPS STA Detector</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Automatic GPS STA Tol</title>
+
 <style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
 body{
-font-family:Arial;
+
+font-family:Arial, Helvetica, sans-serif;
+background:white;
+
+display:flex;
+justify-content:center;
+align-items:center;
+
+min-height:100vh;
+
+}
+
+.container{
+
+width:100%;
+max-width:420px;
+
+padding:30px 20px;
+
 text-align:center;
-margin-top:40px;
+
 }
-#sta{
-font-size:42px;
-font-weight:bold;
-color:#d32f2f;
+
+/* =========================
+LOGO
+========================= */
+
+.logo{
+
+margin-bottom:20px;
+
 }
-#offset{
+
+.logo img{
+
+width:180px;
+max-width:90%;
+
+}
+
+/* =========================
+TITLE
+========================= */
+
+.title{
+
+font-size:28px;
+font-weight:700;
+color:#222;
+
+line-height:1.2;
+
+margin-bottom:55px;
+
+}
+
+/* =========================
+STA LABEL
+========================= */
+
+.sta-label{
+
+font-size:78px;
+font-weight:800;
+color:#f57c00;
+
+line-height:1;
+
+}
+
+/* =========================
+STA NUMBER
+========================= */
+
+.sta-number{
+
+font-size:72px;
+font-weight:800;
+color:#f57c00;
+
+line-height:1.05;
+
+margin-top:8px;
+margin-bottom:45px;
+
+}
+
+/* =========================
+OFFSET
+========================= */
+
+.offset{
+
+font-size:30px;
+color:#222;
+
+margin-bottom:40px;
+
+}
+
+/* =========================
+SEGMENT
+========================= */
+
+.segment{
+
+font-size:32px;
+font-weight:700;
+color:#111;
+
+line-height:1.2;
+
+margin-bottom:28px;
+
+}
+
+/* =========================
+JALUR
+========================= */
+
+.jalur{
+
+font-size:34px;
+font-weight:700;
+color:#f57c00;
+
+}
+
+/* =========================
+STATUS
+========================= */
+
+.status{
+
+margin-top:25px;
+
 font-size:18px;
-margin-top:6px;
-}
-#accuracy{
-font-size:16px;
-color:#555;
-margin-top:4px;
-}
-#status{
-font-size:14px;
-margin-top:10px;
 color:#777;
+
+line-height:1.5;
+
 }
+
+/* =========================
+RESPONSIVE MOBILE
+========================= */
+
+@media(max-width:480px){
+
+.logo img{
+width:160px;
+}
+
+.title{
+font-size:24px;
+margin-bottom:45px;
+}
+
+.sta-label{
+font-size:68px;
+}
+
+.sta-number{
+font-size:64px;
+}
+
+.offset{
+font-size:24px;
+}
+
+.segment{
+font-size:26px;
+}
+
+.jalur{
+font-size:28px;
+}
+
+.status{
+font-size:16px;
+}
+
+}
+
 </style>
+
 </head>
+
 <body>
-<h2>GPS STA Detector</h2>
-<div id="sta">Loading STA data...</div>
-<div id="offset"></div>
-<div id="accuracy"></div>
-<div id="status"></div>
+
+<div class="container">
+
+<!-- =========================
+LOGO
+========================= -->
+
+<div class="logo">
+
+<img src="Logo_MMS.png">
+
+</div>
+
+<!-- =========================
+TITLE
+========================= -->
+
+<div class="title">
+STA Tangerang - Merak
+</div>
+
+<!-- =========================
+STA
+========================= -->
+
+<div class="sta-label">
+STA
+</div>
+
+<div class="sta-number" id="sta">
+Loading...
+</div>
+
+<!-- =========================
+OFFSET
+========================= -->
+
+<div class="offset" id="offset">
+Offset ...
+</div>
+
+<!-- =========================
+SEGMENT
+========================= -->
+
+<div class="segment" id="segment">
+Loading Segment...
+</div>
+
+<!-- =========================
+JALUR
+========================= -->
+
+<div class="jalur" id="jalur">
+Detecting Direction...
+</div>
+
+<!-- =========================
+STATUS
+========================= -->
+
+<div class="status" id="status">
+Waiting GPS...
+</div>
+
+</div>
+
 <script>
-let staData=[]
-let gpsBuffer=[]
-let lastSTA=null
-const SMOOTH_COUNT=5
-const ACCURACY_LIMIT=15
+
+/* =====================================
+DATABASE
+===================================== */
+
+let staData=[];
+
+/* =====================================
+SETTING
+===================================== */
+
+/* Maksimum offset centerline */
+
+const MAX_OFFSET = 30;
+
+/* Maksimum GPS accuracy */
+
+const MAX_GPS_ACCURACY = 15;
+
+/* Minimal delta STA */
+
+const MIN_DIRECTION_DELTA = 10;
+
+/* History STA */
+
+const HISTORY_SIZE = 3;
+
+/* Update interval */
+
+const UPDATE_INTERVAL = 250;
+
+/* =====================================
+VARIABLE
+===================================== */
+
+let staHistory=[];
+
+let gpsHistory=[];
+
+let GPS_SMOOTHING = 5;
+
+let lockedJalur="Detecting Direction...";
+
+let lastUpdate=0;
+
+let offRouteCounter=0;
+
+/* =====================================
+DISTANCE FUNCTION
+===================================== */
+
 function distance(lat1,lon1,lat2,lon2){
-let R=6371000
-let dLat=(lat2-lat1)*Math.PI/180
-let dLon=(lon2-lon1)*Math.PI/180
+
+let R=6371000;
+
+let dLat=(lat2-lat1)*Math.PI/180;
+let dLon=(lon2-lon1)*Math.PI/180;
+
 let a=
 Math.sin(dLat/2)*Math.sin(dLat/2)+
 Math.cos(lat1*Math.PI/180)*
 Math.cos(lat2*Math.PI/180)*
-Math.sin(dLon/2)*Math.sin(dLon/2)
-let c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))
-return R*c
+Math.sin(dLon/2)*Math.sin(dLon/2);
+
+let c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+
+return R*c;
+
 }
-function smoothGPS(lat,lon){
-gpsBuffer.push({lat,lon})
-if(gpsBuffer.length>SMOOTH_COUNT){
-gpsBuffer.shift()
+
+/* =====================================
+FORMAT STA
+59885 -> 59+885
+===================================== */
+
+function formatSTA(staValue){
+
+let km=Math.floor(staValue/1000);
+
+let meter=Math.round(staValue%1000);
+
+return km+"+"+meter.toString().padStart(3,'0');
+
 }
-let sumLat=0
-let sumLon=0
-gpsBuffer.forEach(p=>{
-sumLat+=p.lat
-sumLon+=p.lon
-})
-return{
-lat:sumLat/gpsBuffer.length,
-lon:sumLon/gpsBuffer.length
-}
-}
+
+/* =====================================
+FIND STA
+===================================== */
+
 function findSTA(lat,lon){
-let min=999999
-let nearest=null
-for(let i=0;i<staData.length;i++){
-let p=staData[i]
-let d=distance(lat,lon,p.lat,p.lon)
+
+let min=999999;
+
+let index=0;
+
+/* Cari titik STA terdekat */
+
+staData.forEach((p,i)=>{
+
+let d=distance(lat,lon,p.lat,p.lon);
+
 if(d<min){
-min=d
-nearest=p.sta
+
+min=d;
+index=i;
+
 }
+
+});
+
+/* Ambil titik terdekat */
+
+let p1=staData[index];
+
+/* =====================================
+OFF ROUTE VALIDATION
+===================================== */
+
+if(min > MAX_OFFSET){
+
+offRouteCounter++;
+
 }
-if(lastSTA!==null){
-if(Math.abs(nearest-lastSTA)>20){
-return
+else{
+
+offRouteCounter=0;
+
 }
+
+/* Jika benar-benar off route */
+
+if(offRouteCounter >= 3){
+
+document.getElementById("status").innerHTML=
+"Outside Alignment";
+
+return;
+
 }
-lastSTA=nearest
-document.getElementById("sta").innerHTML="STA "+nearest
-document.getElementById("offset").innerHTML="Offset "+min.toFixed(1)+" m"
+
+/* =====================================
+STA TERDEKAT
+===================================== */
+
+let sta=p1.sta;
+
+/* =====================================
+UPDATE HISTORY STA
+===================================== */
+
+staHistory.push(sta);
+
+/* Maksimum history */
+
+if(staHistory.length > HISTORY_SIZE){
+
+staHistory.shift();
+
 }
+
+/* =====================================
+DETEKSI ARAH
+===================================== */
+
+if(staHistory.length >= 2){
+
+let firstSTA=staHistory[0];
+
+let lastSTA=
+staHistory[staHistory.length-1];
+
+let delta=lastSTA-firstSTA;
+
+/* Menuju Merak */
+
+if(delta >= MIN_DIRECTION_DELTA){
+
+lockedJalur="Jalur A";
+
+/* Menuju Tangerang */
+
+}
+else if(delta <= -MIN_DIRECTION_DELTA){
+
+lockedJalur="Jalur B";
+
+}
+
+}
+
+/* =====================================
+DISPLAY STA
+===================================== */
+
+document.getElementById("sta").innerHTML=
+formatSTA(sta);
+
+/* =====================================
+DISPLAY OFFSET
+===================================== */
+
+document.getElementById("offset").innerHTML=
+"Offset "+min.toFixed(1)+" m";
+
+/* =====================================
+DISPLAY SEGMENT
+===================================== */
+
+document.getElementById("segment").innerHTML=
+p1.segment;
+
+/* =====================================
+DISPLAY JALUR
+===================================== */
+
+document.getElementById("jalur").innerHTML=
+lockedJalur;
+
+/* =====================================
+DISPLAY STATUS
+===================================== */
+
+document.getElementById("status").innerHTML=
+"GPS Active";
+
+}
+
+/* =====================================
+START GPS
+===================================== */
+
 function startGPS(){
+
 if(!navigator.geolocation){
-document.getElementById("status").innerHTML="GPS not supported"
-return
+
+alert("GPS tidak didukung browser");
+
+return;
+
 }
+
 navigator.geolocation.watchPosition(
+
 function(pos){
-let acc=pos.coords.accuracy
-document.getElementById("accuracy").innerHTML=
-"GPS accuracy "+acc.toFixed(1)+" m"
-if(acc>ACCURACY_LIMIT){
-return
+
+/* =====================================
+UPDATE THROTTLING
+===================================== */
+
+let now=Date.now();
+
+if(now-lastUpdate < UPDATE_INTERVAL){
+
+return;
+
 }
-let rawLat=pos.coords.latitude
-let rawLon=pos.coords.longitude
-let smoothed=smoothGPS(rawLat,rawLon)
-findSTA(smoothed.lat,smoothed.lon)
+
+lastUpdate=now;
+
+/* =====================================
+GPS ACCURACY FILTER
+===================================== */
+
+if(pos.coords.accuracy > MAX_GPS_ACCURACY){
+
+document.getElementById("status").innerHTML=
+"Poor GPS Accuracy";
+
+return;
+
+}
+
+/* =====================================
+SPEED ADAPTIVE SMOOTHING
+===================================== */
+
+let speed = pos.coords.speed || 0;
+
+/* m/s */
+
+if(speed > 20){
+
+GPS_SMOOTHING = 2;
+
+}
+else if(speed > 10){
+
+GPS_SMOOTHING = 3;
+
+}
+else{
+
+GPS_SMOOTHING = 5;
+
+}
+
+/* =====================================
+GPS SMOOTHING
+===================================== */
+
+gpsHistory.push({
+
+lat:pos.coords.latitude,
+lon:pos.coords.longitude
+
+});
+
+/* Maksimum smoothing */
+
+if(gpsHistory.length > GPS_SMOOTHING){
+
+gpsHistory.shift();
+
+}
+
+/* Average latitude longitude */
+
+let lat=0;
+let lon=0;
+
+gpsHistory.forEach(p=>{
+
+lat += p.lat;
+lon += p.lon;
+
+});
+
+lat = lat / gpsHistory.length;
+lon = lon / gpsHistory.length;
+
+/* =====================================
+FIND STA
+===================================== */
+
+findSTA(lat,lon);
+
 },
+
 function(err){
-document.getElementById("status").innerHTML="GPS error: "+err.message
+
+document.getElementById("status").innerHTML=
+"GPS Error";
+
 },
+
 {
 enableHighAccuracy:true,
-maximumAge:0,
-timeout:10000
+timeout:5000,
+maximumAge:0
 }
-)
+
+);
+
 }
-fetch("STA_Tamer.csv?nocache="+Date.now())
+
+/* =====================================
+LOAD CSV
+===================================== */
+
+fetch("sta_tm_R1.csv")
+
 .then(r=>r.text())
+
 .then(text=>{
-let rows=text.split("\n").slice(1)
+
+let rows=text.split("\n").slice(1);
+
+/* LOOP CSV */
+
 rows.forEach(r=>{
-let c=r.split(",")
-if(c.length>=3){
+
+let c=r.split(",");
+
+/* FORMAT:
+STA,Lat,Long,Segment
+*/
+
+if(c.length>=4){
+
 staData.push({
+
 sta:parseFloat(c[0]),
 lat:parseFloat(c[1]),
-lon:parseFloat(c[2])
-})
+lon:parseFloat(c[2]),
+segment:c[3]
+
+});
+
 }
-})
-document.getElementById("sta").innerHTML="STA data loaded"
-document.getElementById("status").innerHTML="Waiting GPS..."
-startGPS()
-})
+
+});
+
+/* =====================================
+START GPS
+===================================== */
+
+document.getElementById("status").innerHTML=
+"GPS Ready";
+
+startGPS();
+
+});
+
 </script>
+
 </body>
-</html> baca kode ini
+
+</html>
