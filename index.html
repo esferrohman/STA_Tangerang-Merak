@@ -236,7 +236,7 @@ STA
 </div>
 
 <div class="sta-number" id="sta">
-Loading...
+--+---
 </div>
 
 <!-- =========================
@@ -252,7 +252,7 @@ SEGMENT
 ========================= -->
 
 <div class="segment" id="segment">
-Loading Segment...
+--
 </div>
 
 <!-- =========================
@@ -268,7 +268,7 @@ STATUS
 ========================= -->
 
 <div class="status" id="status">
-Waiting GPS...
+Loading data...
 </div>
 
 </div>
@@ -279,68 +279,77 @@ Waiting GPS...
 DATABASE
 ===================================== */
 
-let staData=[];
+let staData = [];
 
 /* =====================================
 SETTING
 ===================================== */
 
 /* Maksimum offset centerline */
-
 const MAX_OFFSET = 30;
 
 /* Maksimum GPS accuracy */
-
 const MAX_GPS_ACCURACY = 15;
 
-/* Minimal delta STA */
-
+/* Minimal delta STA untuk deteksi arah */
 const MIN_DIRECTION_DELTA = 10;
 
-/* History STA */
+/* Jumlah konfirmasi arah sebelum lock */
+const DIRECTION_LOCK_COUNT = 3;
 
-const HISTORY_SIZE = 3;
+/* Jumlah konfirmasi arah berlawanan sebelum ganti lock */
+const DIRECTION_CHANGE_COUNT = 5;
+
+/* History STA untuk deteksi arah */
+const HISTORY_SIZE = 7;
 
 /* Update interval */
-
 const UPDATE_INTERVAL = 250;
 
 /* =====================================
 VARIABLE
 ===================================== */
 
-let staHistory=[];
-
-let gpsHistory=[];
-
+let staHistory = [];
+let gpsHistory = [];
 let GPS_SMOOTHING = 5;
 
-let lockedJalur="Detecting Direction...";
+/*
+  lockedJalur: null = belum terkunci
+  "Jalur A" atau "Jalur B" = terkunci
+*/
+let lockedJalur = null;
 
-let lastUpdate=0;
+/*
+  Penghitung konfirmasi arah sementara
+  (sebelum lock resmi berubah)
+*/
+let directionConfirmCount = 0;
+let pendingJalur = null;
 
-let offRouteCounter=0;
+let lastUpdate = 0;
+let offRouteCounter = 0;
 
 /* =====================================
 DISTANCE FUNCTION
 ===================================== */
 
-function distance(lat1,lon1,lat2,lon2){
+function distance(lat1, lon1, lat2, lon2) {
 
-let R=6371000;
+  let R = 6371000;
 
-let dLat=(lat2-lat1)*Math.PI/180;
-let dLon=(lon2-lon1)*Math.PI/180;
+  let dLat = (lat2 - lat1) * Math.PI / 180;
+  let dLon = (lon2 - lon1) * Math.PI / 180;
 
-let a=
-Math.sin(dLat/2)*Math.sin(dLat/2)+
-Math.cos(lat1*Math.PI/180)*
-Math.cos(lat2*Math.PI/180)*
-Math.sin(dLon/2)*Math.sin(dLon/2);
+  let a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
-let c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-return R*c;
+  return R * c;
 
 }
 
@@ -349,13 +358,94 @@ FORMAT STA
 59885 -> 59+885
 ===================================== */
 
-function formatSTA(staValue){
+function formatSTA(staValue) {
 
-let km=Math.floor(staValue/1000);
+  let km = Math.floor(staValue / 1000);
+  let meter = Math.round(staValue % 1000);
 
-let meter=Math.round(staValue%1000);
+  return km + "+" + meter.toString().padStart(3, '0');
 
-return km+"+"+meter.toString().padStart(3,'0');
+}
+
+/* =====================================
+DETECT DIRECTION (dengan lock kuat)
+===================================== */
+
+function detectDirection() {
+
+  if (staHistory.length < 4) return;
+
+  let firstSTA = staHistory[0];
+  let lastSTA = staHistory[staHistory.length - 1];
+  let delta = lastSTA - firstSTA;
+
+  let detectedJalur = null;
+
+  if (delta >= MIN_DIRECTION_DELTA) {
+    detectedJalur = "Jalur A";  /* Menuju Merak */
+  } else if (delta <= -MIN_DIRECTION_DELTA) {
+    detectedJalur = "Jalur B";  /* Menuju Tangerang */
+  } else {
+    /* Delta terlalu kecil, belum bisa tentukan arah */
+    return;
+  }
+
+  /* Kalau belum ada lock, langsung set pending */
+  if (lockedJalur === null) {
+
+    if (detectedJalur === pendingJalur) {
+
+      directionConfirmCount++;
+
+      /* Butuh DIRECTION_LOCK_COUNT konfirmasi untuk lock pertama */
+      if (directionConfirmCount >= DIRECTION_LOCK_COUNT) {
+        lockedJalur = detectedJalur;
+        directionConfirmCount = 0;
+        pendingJalur = null;
+      }
+
+    } else {
+
+      /* Arah baru, reset counter */
+      pendingJalur = detectedJalur;
+      directionConfirmCount = 1;
+
+    }
+
+  } else {
+
+    /* Sudah ada lock — hanya ganti jika arah berlawanan
+       dan konfirmasi sudah cukup banyak */
+
+    if (detectedJalur !== lockedJalur) {
+
+      if (detectedJalur === pendingJalur) {
+
+        directionConfirmCount++;
+
+        /* Butuh DIRECTION_CHANGE_COUNT konfirmasi untuk ganti lock */
+        if (directionConfirmCount >= DIRECTION_CHANGE_COUNT) {
+          lockedJalur = detectedJalur;
+          directionConfirmCount = 0;
+          pendingJalur = null;
+        }
+
+      } else {
+
+        pendingJalur = detectedJalur;
+        directionConfirmCount = 1;
+
+      }
+
+    } else {
+
+      /* Sesuai lock saat ini, reset pending */
+      pendingJalur = null;
+      directionConfirmCount = 0;
+
+    }
+
+  }
 
 }
 
@@ -363,141 +453,99 @@ return km+"+"+meter.toString().padStart(3,'0');
 FIND STA
 ===================================== */
 
-function findSTA(lat,lon){
+function findSTA(lat, lon) {
 
-let min=999999;
+  let min = 999999;
+  let index = 0;
 
-let index=0;
+  /* Cari titik STA terdekat */
+  staData.forEach((p, i) => {
 
-/* Cari titik STA terdekat */
+    let d = distance(lat, lon, p.lat, p.lon);
 
-staData.forEach((p,i)=>{
+    if (d < min) {
+      min = d;
+      index = i;
+    }
 
-let d=distance(lat,lon,p.lat,p.lon);
+  });
 
-if(d<min){
+  let p1 = staData[index];
 
-min=d;
-index=i;
+  /* =====================================
+  OFF ROUTE VALIDATION
+  ===================================== */
 
-}
+  if (min > MAX_OFFSET) {
 
-});
+    offRouteCounter++;
 
-/* Ambil titik terdekat */
+  } else {
 
-let p1=staData[index];
+    offRouteCounter = 0;
 
-/* =====================================
-OFF ROUTE VALIDATION
-===================================== */
+  }
 
-if(min > MAX_OFFSET){
+  /* Jika benar-benar off route */
+  if (offRouteCounter >= 3) {
 
-offRouteCounter++;
+    document.getElementById("status").innerHTML =
+      "Outside Alignment";
 
-}
-else{
+    return;
 
-offRouteCounter=0;
+  }
 
-}
+  /* =====================================
+  UPDATE HISTORY STA
+  ===================================== */
 
-/* Jika benar-benar off route */
+  staHistory.push(p1.sta);
 
-if(offRouteCounter >= 3){
+  if (staHistory.length > HISTORY_SIZE) {
+    staHistory.shift();
+  }
 
-document.getElementById("status").innerHTML=
-"Outside Alignment";
+  /* =====================================
+  DETEKSI ARAH
+  ===================================== */
 
-return;
+  detectDirection();
 
-}
+  /* =====================================
+  DISPLAY STA
+  ===================================== */
 
-/* =====================================
-STA TERDEKAT
-===================================== */
+  document.getElementById("sta").innerHTML =
+    formatSTA(p1.sta);
 
-let sta=p1.sta;
+  /* =====================================
+  DISPLAY OFFSET
+  ===================================== */
 
-/* =====================================
-UPDATE HISTORY STA
-===================================== */
+  document.getElementById("offset").innerHTML =
+    "Offset " + min.toFixed(1) + " m";
 
-staHistory.push(sta);
+  /* =====================================
+  DISPLAY SEGMENT
+  ===================================== */
 
-/* Maksimum history */
+  document.getElementById("segment").innerHTML =
+    p1.segment;
 
-if(staHistory.length > HISTORY_SIZE){
+  /* =====================================
+  DISPLAY JALUR
+  ===================================== */
 
-staHistory.shift();
+  document.getElementById("jalur").innerHTML =
+    lockedJalur !== null ? lockedJalur : "Detecting Direction...";
 
-}
+  /* =====================================
+  DISPLAY STATUS
+  ===================================== */
 
-/* =====================================
-DETEKSI ARAH
-===================================== */
-
-if(staHistory.length >= 2){
-
-let firstSTA=staHistory[0];
-
-let lastSTA=
-staHistory[staHistory.length-1];
-
-let delta=lastSTA-firstSTA;
-
-/* Menuju Merak */
-
-if(delta >= MIN_DIRECTION_DELTA){
-
-lockedJalur="Jalur A";
-
-/* Menuju Tangerang */
-
-}
-else if(delta <= -MIN_DIRECTION_DELTA){
-
-lockedJalur="Jalur B";
-
-}
-
-}
-
-/* =====================================
-DISPLAY STA
-===================================== */
-
-document.getElementById("sta").innerHTML=
-formatSTA(sta);
-
-/* =====================================
-DISPLAY OFFSET
-===================================== */
-
-document.getElementById("offset").innerHTML=
-"Offset "+min.toFixed(1)+" m";
-
-/* =====================================
-DISPLAY SEGMENT
-===================================== */
-
-document.getElementById("segment").innerHTML=
-p1.segment;
-
-/* =====================================
-DISPLAY JALUR
-===================================== */
-
-document.getElementById("jalur").innerHTML=
-lockedJalur;
-
-/* =====================================
-DISPLAY STATUS
-===================================== */
-
-document.getElementById("status").innerHTML=
-"GPS Active";
+  document.getElementById("status").innerHTML =
+    "GPS Active";
 
 }
 
@@ -505,127 +553,151 @@ document.getElementById("status").innerHTML=
 START GPS
 ===================================== */
 
-function startGPS(){
+function startGPS() {
 
-if(!navigator.geolocation){
+  if (!navigator.geolocation) {
 
-alert("GPS tidak didukung browser");
+    document.getElementById("status").innerHTML =
+      "GPS tidak didukung browser";
 
-return;
+    return;
 
-}
+  }
 
-navigator.geolocation.watchPosition(
+  navigator.geolocation.watchPosition(
 
-function(pos){
+    function (pos) {
 
-/* =====================================
-UPDATE THROTTLING
-===================================== */
+      /* =====================================
+      UPDATE THROTTLING
+      ===================================== */
 
-let now=Date.now();
+      let now = Date.now();
 
-if(now-lastUpdate < UPDATE_INTERVAL){
+      if (now - lastUpdate < UPDATE_INTERVAL) {
+        return;
+      }
 
-return;
+      lastUpdate = now;
 
-}
+      /* =====================================
+      GPS ACCURACY FILTER
+      ===================================== */
 
-lastUpdate=now;
+      let acc = pos.coords.accuracy;
 
-/* =====================================
-GPS ACCURACY FILTER
-===================================== */
+      if (acc > MAX_GPS_ACCURACY) {
 
-if(pos.coords.accuracy > MAX_GPS_ACCURACY){
+        document.getElementById("status").innerHTML =
+          "Poor GPS (" + acc.toFixed(0) + " m)";
 
-document.getElementById("status").innerHTML=
-"Poor GPS Accuracy";
+        return;
 
-return;
+      }
 
-}
+      /* =====================================
+      SPEED ADAPTIVE SMOOTHING
+      Fallback ke riwayat STA jika speed null
+      ===================================== */
 
-/* =====================================
-SPEED ADAPTIVE SMOOTHING
-===================================== */
+      let speed = pos.coords.speed;
 
-let speed = pos.coords.speed || 0;
+      if (speed !== null && speed !== undefined) {
 
-/* m/s */
+        /* m/s */
+        if (speed > 20) {
+          GPS_SMOOTHING = 2;
+        } else if (speed > 10) {
+          GPS_SMOOTHING = 3;
+        } else {
+          GPS_SMOOTHING = 5;
+        }
 
-if(speed > 20){
+      } else {
 
-GPS_SMOOTHING = 2;
+        /* Speed tidak tersedia — estimasi dari delta STA history */
+        if (staHistory.length >= 2) {
 
-}
-else if(speed > 10){
+          let staDelta = Math.abs(
+            staHistory[staHistory.length - 1] -
+            staHistory[staHistory.length - 2]
+          );
 
-GPS_SMOOTHING = 3;
+          /* Anggap update ~250ms, delta STA ~ jarak tempuh */
+          /* staDelta besar = kecepatan tinggi */
 
-}
-else{
+          if (staDelta > 5) {
+            GPS_SMOOTHING = 2;
+          } else if (staDelta > 2) {
+            GPS_SMOOTHING = 3;
+          } else {
+            GPS_SMOOTHING = 5;
+          }
 
-GPS_SMOOTHING = 5;
+        } else {
 
-}
+          GPS_SMOOTHING = 5;
 
-/* =====================================
-GPS SMOOTHING
-===================================== */
+        }
 
-gpsHistory.push({
+      }
 
-lat:pos.coords.latitude,
-lon:pos.coords.longitude
+      /* =====================================
+      GPS SMOOTHING
+      ===================================== */
 
-});
+      gpsHistory.push({
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude
+      });
 
-/* Maksimum smoothing */
+      if (gpsHistory.length > GPS_SMOOTHING) {
+        gpsHistory.shift();
+      }
 
-if(gpsHistory.length > GPS_SMOOTHING){
+      let lat = 0;
+      let lon = 0;
 
-gpsHistory.shift();
+      gpsHistory.forEach(p => {
+        lat += p.lat;
+        lon += p.lon;
+      });
 
-}
+      lat = lat / gpsHistory.length;
+      lon = lon / gpsHistory.length;
 
-/* Average latitude longitude */
+      /* =====================================
+      FIND STA
+      ===================================== */
 
-let lat=0;
-let lon=0;
+      findSTA(lat, lon);
 
-gpsHistory.forEach(p=>{
+    },
 
-lat += p.lat;
-lon += p.lon;
+    function (err) {
 
-});
+      let msg = "GPS Error";
 
-lat = lat / gpsHistory.length;
-lon = lon / gpsHistory.length;
+      /* Pesan lebih informatif per error code */
+      if (err.code === 1) {
+        msg = "GPS: Izin ditolak";
+      } else if (err.code === 2) {
+        msg = "GPS: Sinyal tidak tersedia";
+      } else if (err.code === 3) {
+        msg = "GPS: Timeout";
+      }
 
-/* =====================================
-FIND STA
-===================================== */
+      document.getElementById("status").innerHTML = msg;
 
-findSTA(lat,lon);
+    },
 
-},
+    {
+      enableHighAccuracy: true,
+      timeout: 5000,
+      maximumAge: 0
+    }
 
-function(err){
-
-document.getElementById("status").innerHTML=
-"GPS Error";
-
-},
-
-{
-enableHighAccuracy:true,
-timeout:5000,
-maximumAge:0
-}
-
-);
+  );
 
 }
 
@@ -633,49 +705,71 @@ maximumAge:0
 LOAD CSV
 ===================================== */
 
-fetch("sta_tm_R1.csv")
+document.getElementById("status").innerHTML = "Loading data...";
 
-.then(r=>r.text())
+fetch("sta_tm_R1.csv?nocache=" + Date.now())
 
-.then(text=>{
+  .then(r => {
 
-let rows=text.split("\n").slice(1);
+    if (!r.ok) {
+      throw new Error("HTTP " + r.status);
+    }
 
-/* LOOP CSV */
+    return r.text();
 
-rows.forEach(r=>{
+  })
 
-let c=r.split(",");
+  .then(text => {
 
-/* FORMAT:
-STA,Lat,Long,Segment
-*/
+    let rows = text.split("\n").slice(1);
 
-if(c.length>=4){
+    let loadCount = 0;
 
-staData.push({
+    rows.forEach(r => {
 
-sta:parseFloat(c[0]),
-lat:parseFloat(c[1]),
-lon:parseFloat(c[2]),
-segment:c[3]
+      /* Trim untuk handle \r\n (Windows line endings) */
+      let c = r.trim().split(",");
 
-});
+      /* FORMAT: STA,Lat,Long,Segment */
+      if (c.length >= 4 && !isNaN(parseFloat(c[0]))) {
 
-}
+        staData.push({
+          sta: parseFloat(c[0]),
+          lat: parseFloat(c[1]),
+          lon: parseFloat(c[2]),
+          segment: c[3].trim()
+        });
 
-});
+        loadCount++;
 
-/* =====================================
-START GPS
-===================================== */
+      }
 
-document.getElementById("status").innerHTML=
-"GPS Ready";
+    });
 
-startGPS();
+    if (loadCount === 0) {
 
-});
+      document.getElementById("status").innerHTML =
+        "Data kosong / format salah";
+
+      return;
+
+    }
+
+    document.getElementById("status").innerHTML =
+      "GPS Ready (" + loadCount + " titik)";
+
+    startGPS();
+
+  })
+
+  .catch(err => {
+
+    document.getElementById("status").innerHTML =
+      "Gagal load data: " + err.message;
+
+    console.error("CSV load error:", err);
+
+  });
 
 </script>
 
