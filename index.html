@@ -2,172 +2,431 @@
 <html lang="id">
 
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Automatic GPS STA Tol</title>
+<meta name="theme-color" content="#ffffff">
+<title>GPS Auto-STA Locator</title>
 
 <style>
+:root{
+  --orange:#f47a20;
+  --orange-soft:#fff3e9;
+  --ink:#18202a;
+  --muted:#6f7782;
+  --line:#e8ebef;
+  --surface:#ffffff;
+  --canvas:#f4f6f8;
+  --green:#238657;
+  --green-soft:#eaf7f0;
+  --amber:#b76b00;
+  --amber-soft:#fff4db;
+  --red:#c83d3d;
+  --red-soft:#fff0f0;
+}
 
 *{
-margin:0;
-padding:0;
-box-sizing:border-box;
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html,body{
+  min-height:100%;
 }
 
 body{
-font-family:Arial, Helvetica, sans-serif;
-background:white;
-display:flex;
-justify-content:center;
-align-items:center;
-min-height:100vh;
+  font-family:Arial, Helvetica, sans-serif;
+  background:var(--canvas);
+  color:var(--ink);
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
 }
 
-.container{
-width:100%;
-max-width:420px;
-padding:30px 20px;
-text-align:center;
+.app-shell{
+  width:100%;
+  max-width:430px;
+  min-height:100vh;
+  background:var(--surface);
+  padding:0 18px 26px;
 }
 
-.logo{ margin-bottom:20px; }
-.logo img{ width:180px; max-width:90%; }
-
-.title{
-font-size:28px;
-font-weight:700;
-color:#222;
-line-height:1.2;
-margin-bottom:55px;
+.app-header{
+  padding:20px 0 16px;
+  border-bottom:1px solid var(--line);
 }
 
-.sta-label{
-font-size:78px;
-font-weight:800;
-color:#f57c00;
-line-height:1;
+.brand{
+  display:flex;
+  align-items:center;
+  gap:13px;
+  text-align:left;
+}
+
+.logo img{
+  width:118px;
+  max-width:100%;
+  display:block;
+}
+
+.brand-copy{
+  min-width:0;
+}
+
+.eyebrow{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.12em;
+  color:var(--muted);
+  margin-bottom:4px;
+}
+
+.app-title{
+  font-size:16px;
+  line-height:1.15;
+  font-weight:800;
+  letter-spacing:.01em;
+  color:var(--ink);
+}
+
+.hero{
+  margin-top:18px;
+  padding:24px 18px 20px;
+  border:1px solid var(--line);
+  border-radius:22px;
+  text-align:center;
+  box-shadow:0 10px 28px rgba(25,32,42,.06);
+}
+
+.hero-label{
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.16em;
+  color:var(--muted);
 }
 
 .sta-number{
-font-size:72px;
-font-weight:800;
-color:#f57c00;
-line-height:1.05;
-margin-top:8px;
-margin-bottom:45px;
-transition:color .25s;
+  margin:8px 0 13px;
+  font-size:64px;
+  line-height:1;
+  font-weight:850;
+  letter-spacing:-.04em;
+  color:var(--orange);
+  transition:color .25s, opacity .25s;
 }
 
-/* Tampilan saat data BASI / tidak akurat */
 .sta-number.stale{
-color:#bbb;
+  color:#b5bac1;
 }
 
-.offset{
-font-size:30px;
-color:#222;
-margin-bottom:40px;
+.hero-meta{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:9px;
+  flex-wrap:wrap;
 }
 
-.segment{
-font-size:32px;
-font-weight:700;
-color:#111;
-line-height:1.2;
-margin-bottom:28px;
+.lane-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:34px;
+  padding:0 13px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.04em;
+  border:1px solid var(--line);
 }
 
-.jalur{
-font-size:34px;
-font-weight:700;
-color:#f57c00;
+.lane-badge.ready{
+  color:var(--orange);
+  background:var(--orange-soft);
+  border-color:#ffd8b8;
 }
 
-.status{
-margin-top:25px;
-font-size:18px;
-color:#777;
-line-height:1.5;
+.lane-badge.pending{
+  color:var(--muted);
+  background:#f7f8fa;
 }
 
-.status.warn{ color:#e53935; font-weight:700; }
-.status.ok{ color:#2e7d32; }
-
-/* <<< FIX 8: panel debug lapangan */
-.debug{
-margin-top:18px;
-font-size:13px;
-color:#999;
-font-family:"Courier New", monospace;
-line-height:1.6;
-border-top:1px dashed #ddd;
-padding-top:12px;
-display:none;                 /* default tersembunyi */
+.direction{
+  font-size:12px;
+  font-weight:700;
+  color:var(--muted);
 }
-.debug.show{ display:block; }
-.debug b{ color:#555; }
+
+.info-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:12px;
+}
+
+.info-card{
+  min-height:78px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#fff;
+  text-align:left;
+}
+
+.info-card.full{
+  grid-column:1 / -1;
+}
+
+.info-label{
+  display:block;
+  margin-bottom:7px;
+  font-size:10px;
+  line-height:1.2;
+  font-weight:800;
+  letter-spacing:.11em;
+  color:var(--muted);
+}
+
+.info-value{
+  display:block;
+  font-size:18px;
+  line-height:1.25;
+  font-weight:800;
+  color:var(--ink);
+}
+
+.segment-value{
+  font-size:16px;
+}
+
+.status-card{
+  margin-top:12px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  overflow:hidden;
+}
+
+.status-row,
+.route-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:13px 14px;
+}
+
+.route-row{
+  border-top:1px solid var(--line);
+}
+
+.status-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+.status-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#a6adb6;
+  box-shadow:0 0 0 4px #f0f2f4;
+  flex:0 0 auto;
+}
+
+.status-dot.ok{
+  background:var(--green);
+  box-shadow:0 0 0 4px var(--green-soft);
+}
+
+.status-dot.warn{
+  background:var(--amber);
+  box-shadow:0 0 0 4px var(--amber-soft);
+}
+
+.status-dot.error{
+  background:var(--red);
+  box-shadow:0 0 0 4px var(--red-soft);
+}
+
+.status-caption,
+.route-caption{
+  display:block;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.11em;
+  color:var(--muted);
+  margin-bottom:3px;
+}
+
+.status-text{
+  display:block;
+  font-size:13px;
+  font-weight:800;
+  color:var(--ink);
+  line-height:1.25;
+}
+
+.status-text.ok{ color:var(--green); }
+.status-text.warn{ color:var(--amber); }
+.status-text.error{ color:var(--red); }
+
+.route-state{
+  font-size:12px;
+  font-weight:800;
+  color:var(--muted);
+  text-align:right;
+}
+
+.route-state.ok{ color:var(--green); }
+.route-state.warn{ color:var(--amber); }
+.route-state.error{ color:var(--red); }
+
+.usage-hint{
+  margin-top:12px;
+  padding:11px 13px;
+  border-radius:13px;
+  background:#f7f8fa;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.45;
+  text-align:left;
+}
 
 .debug-toggle{
-margin-top:22px;
-font-size:12px;
-color:#bbb;
-text-decoration:underline;
-cursor:pointer;
-user-select:none;
+  margin-top:16px;
+  font-size:11px;
+  color:#9aa1aa;
+  text-decoration:underline;
+  cursor:pointer;
+  user-select:none;
+  text-align:center;
 }
 
-@media(max-width:480px){
-.logo img{ width:160px; }
-.title{ font-size:24px; margin-bottom:45px; }
-.sta-label{ font-size:68px; }
-.sta-number{ font-size:64px; }
-.offset{ font-size:24px; }
-.segment{ font-size:26px; }
-.jalur{ font-size:28px; }
-.status{ font-size:16px; }
+.debug{
+  margin-top:10px;
+  padding:13px 14px;
+  border:1px dashed #d8dde3;
+  border-radius:14px;
+  background:#fafbfc;
+  font-size:11px;
+  color:#777f89;
+  font-family:"Courier New", monospace;
+  line-height:1.65;
+  display:none;
+  text-align:left;
 }
 
+.debug.show{
+  display:block;
+}
+
+.debug b{
+  color:#4e5660;
+}
+
+.footer{
+  padding-top:16px;
+  text-align:center;
+  font-size:10px;
+  color:#a0a6ae;
+}
+
+@media(max-width:360px){
+  .app-shell{ padding-left:14px; padding-right:14px; }
+  .logo img{ width:105px; }
+  .app-title{ font-size:14px; }
+  .sta-number{ font-size:56px; }
+  .info-value{ font-size:16px; }
+  .segment-value{ font-size:15px; }
+}
 </style>
-
 </head>
 
 <body>
 
-<div class="container">
+<div class="app-shell">
 
-<div class="logo">
-<img src="Logo_MMS.png" alt="MMS">
-</div>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">
+        <img src="Logo_MMS.png" alt="Astra Infra Toll Road">
+      </div>
+      <div class="brand-copy">
+        <div class="eyebrow">CMM · TANGERANG–MERAK</div>
+        <div class="app-title">GPS AUTO-STA LOCATOR</div>
+      </div>
+    </div>
+  </header>
 
-<div class="title">
-STA Tangerang - Merak
-</div>
+  <main>
 
-<div class="sta-label">STA</div>
+    <section class="hero">
+      <div class="hero-label">CURRENT STA</div>
+      <div class="sta-number" id="sta">--+---</div>
 
-<div class="sta-number" id="sta">--+---</div>
+      <div class="hero-meta">
+        <div class="lane-badge pending" id="jalur">MENENTUKAN JALUR...</div>
+        <div class="direction" id="directionName">Menunggu arah pergerakan</div>
+      </div>
+    </section>
 
-<div class="offset" id="offset">Offset ...</div>
+    <section class="info-grid">
+      <article class="info-card full">
+        <span class="info-label">SEGMEN</span>
+        <strong class="info-value segment-value" id="segment">--</strong>
+      </article>
 
-<div class="segment" id="segment">--</div>
+      <article class="info-card">
+        <span class="info-label">OFFSET KE ALIGNMENT</span>
+        <strong class="info-value" id="offset">-- m</strong>
+      </article>
 
-<div class="jalur" id="jalur">Detecting Direction...</div>
+      <article class="info-card">
+        <span class="info-label">GPS ACCURACY</span>
+        <strong class="info-value" id="accuracyMain">-- m</strong>
+      </article>
+    </section>
 
-<div class="status" id="status">Loading data...</div>
+    <section class="status-card">
+      <div class="status-row">
+        <div class="status-left">
+          <span class="status-dot" id="statusDot"></span>
+          <div>
+            <span class="status-caption">STATUS SISTEM</span>
+            <span class="status-text" id="status">Menyiapkan data...</span>
+          </div>
+        </div>
+      </div>
 
-<!-- <<< FIX 8: indikator debug untuk uji lapangan -->
-<div class="debug-toggle" id="debugToggle">tampilkan info teknis</div>
-<div class="debug" id="debug">
-  <div><b>Accuracy:</b> <span id="dAcc">-</span> m</div>
-  <div><b>Speed:</b> <span id="dSpeed">-</span> km/j</div>
-  <div><b>Offset:</b> <span id="dOffset">-</span> m</div>
-  <div><b>Lead proj:</b> <span id="dLead">-</span> m</div>
-  <div><b>Smoothing:</b> <span id="dSmooth">-</span> titik</div>
-  <div><b>Search:</b> <span id="dSearch">-</span></div>
-  <div><b>Fix age:</b> <span id="dAge">-</span> ms</div>
-</div>
+      <div class="route-row">
+        <div>
+          <span class="route-caption">ROUTE CHECK</span>
+        </div>
+        <div class="route-state" id="routeState">Menunggu posisi</div>
+      </div>
+    </section>
+
+    <div class="usage-hint">
+      Gunakan referensi STA hanya saat status <b>GPS READY</b> dan posisi terdeteksi berada pada alignment.
+    </div>
+
+    <div class="debug-toggle" id="debugToggle">tampilkan info teknis</div>
+
+    <div class="debug" id="debug">
+      <div><b>Accuracy:</b> <span id="dAcc">-</span> m</div>
+      <div><b>Speed:</b> <span id="dSpeed">-</span> km/j</div>
+      <div><b>Offset:</b> <span id="dOffset">-</span> m</div>
+      <div><b>Lead proj:</b> <span id="dLead">-</span> m</div>
+      <div><b>Smoothing:</b> <span id="dSmooth">-</span> titik</div>
+      <div><b>Search:</b> <span id="dSearch">-</span></div>
+      <div><b>Fix age:</b> <span id="dAge">-</span> ms</div>
+    </div>
+
+  </main>
+
+  <div class="footer">Database Alignment · STA_Tamer.csv</div>
 
 </div>
 
@@ -179,41 +438,17 @@ DATABASE
 let staData = [];
 
 /* =====================================
-SETTING (dilonggarkan untuk kendaraan cepat)
+SETTING
 ===================================== */
-
-/* Maksimum offset centerline — dinaikkan agar tidak mudah false off-route */
 const MAX_OFFSET = 45;
-
-/* Maksimum GPS accuracy — <<< FIX 9: dilonggarkan 30 -> 38.
-   Banyak HP Android melaporkan 20-35 m saat bergerak cepat; 30 membuang
-   terlalu banyak fix valid sehingga layar sering "Poor GPS". */
 const MAX_GPS_ACCURACY = 38;
-
-/* Minimal delta STA untuk deteksi arah */
 const MIN_DIRECTION_DELTA = 10;
-
-/* Konfirmasi arah sebelum lock */
 const DIRECTION_LOCK_COUNT = 3;
 const DIRECTION_CHANGE_COUNT = 5;
-
-/* History STA untuk deteksi arah */
 const HISTORY_SIZE = 7;
-
-/* Update interval tampilan (display throttle) */
 const UPDATE_INTERVAL = 250;
-
-/* Berapa lama data dianggap masih segar (ms) sebelum di-mark stale */
 const STALE_AFTER = 2500;
-
-/* <<< FIX 1 (binary search): jumlah tetangga kiri-kanan yang diperiksa
-   di sekitar kandidat hasil binary search untuk memastikan jarak fisik
-   (Haversine) benar-benar minimum. Spacing CSV = 5 m, jadi 8 tetangga
-   sudah mencakup ±40 m — lebih dari cukup. */
 const NEIGHBOR_CHECK = 8;
-
-/* <<< FIX 6: batas lead ekstrapolasi (meter) agar noise kecepatan
-   tidak melempar proyeksi terlalu jauh ke depan. */
 const MAX_LEAD_METERS = 25;
 
 /* =====================================
@@ -221,8 +456,6 @@ VARIABLE
 ===================================== */
 let staHistory = [];
 let gpsHistory = [];
-
-/* Smoothing minimal — kunci agar tidak menyeret titik mundur */
 let GPS_SMOOTHING = 2;
 
 let lockedJalur = null;
@@ -232,16 +465,50 @@ let pendingJalur = null;
 let lastDisplayUpdate = 0;
 let offRouteCounter = 0;
 
-/* Untuk ekstrapolasi maju */
-let lastFix = null;        /* {lat, lon, t} fix valid terakhir */
-let lastSTAValue = null;   /* nilai STA valid terakhir */
-let lastGoodTime = 0;      /* waktu fix valid terakhir */
-
-/* <<< FIX 1: index match terakhir untuk pencarian lokal */
+let lastFix = null;
+let lastSTAValue = null;
+let lastGoodTime = 0;
 let lastIndex = -1;
 
-/* <<< FIX 8: state debug */
 let dbg = { acc: null, speed: null, offset: null, lead: 0, search: "-" };
+
+/* =====================================
+UI HELPERS
+===================================== */
+function setSystemStatus(message, state = "idle") {
+  const st = document.getElementById("status");
+  const dot = document.getElementById("statusDot");
+
+  st.className = "status-text" + (state !== "idle" ? " " + state : "");
+  st.textContent = message;
+
+  dot.className = "status-dot" + (state !== "idle" ? " " + state : "");
+}
+
+function setRouteState(message, state = "idle") {
+  const el = document.getElementById("routeState");
+  el.className = "route-state" + (state !== "idle" ? " " + state : "");
+  el.textContent = message;
+}
+
+function updateJalurUI() {
+  const el = document.getElementById("jalur");
+  const direction = document.getElementById("directionName");
+
+  if (lockedJalur === "Jalur A") {
+    el.textContent = "JALUR A";
+    el.className = "lane-badge ready";
+    direction.textContent = "Menuju Merak";
+  } else if (lockedJalur === "Jalur B") {
+    el.textContent = "JALUR B";
+    el.className = "lane-badge ready";
+    direction.textContent = "Menuju Tangerang";
+  } else {
+    el.textContent = "MENENTUKAN JALUR...";
+    el.className = "lane-badge pending";
+    direction.textContent = "Menunggu arah pergerakan";
+  }
+}
 
 /* =====================================
 DISTANCE (Haversine)
@@ -260,65 +527,61 @@ function distance(lat1, lon1, lat2, lon2) {
 }
 
 /* =====================================
-FORMAT STA  59885 -> 59+885
-<<< FIX 3: cegah "+1000" akibat pembulatan meter.
+FORMAT STA
 ===================================== */
 function formatSTA(staValue) {
   let km = Math.floor(staValue / 1000);
   let meter = Math.round(staValue % 1000);
-  if (meter >= 1000) {          /* carry-over: 59+1000 -> 60+000 */
+
+  if (meter >= 1000) {
     km += 1;
     meter -= 1000;
   }
-  return km + "+" + meter.toString().padStart(3, '0');
+
+  return km + "+" + meter.toString().padStart(3, "0");
 }
 
 /* =====================================
-NEAREST STA — BINARY SEARCH geografis
-<<< FIX 1 (binary search): data dijamin urut menaik & rapat (5 m), jadi
-titik CSV terdekat secara jarak-tempuh ~ tetangga terdekat secara koordinat.
-
-Strategi 3 langkah, semuanya O(log n):
-  (a) Binary search index yang koordinatnya paling dekat ke posisi,
-      memakai "posisi relatif sepanjang alignment" sebagai kunci urut.
-  (b) Periksa ±NEIGHBOR_CHECK tetangga untuk memastikan jarak Haversine
-      benar-benar minimum (mengoreksi lengkungan/ramp).
-  (c) Return {index, dist}.
-
-Karena kunci urut geografis tidak selinier nilai STA di semua ramp,
-kita cari lewat proyeksi ke titik-titik: bandingkan jarak ke kandidat
-tengah vs tetangganya untuk memutuskan arah — pola "descend" pada
-fungsi jarak yang uni-modal sepanjang jalur.
+NEAREST STA
 ===================================== */
 function findNearestIndex(posLat, posLon) {
   let n = staData.length;
-  if (n === 0) return { index: 0, dist: 999999 };
-  if (n === 1) return { index: 0, dist: distance(posLat, posLon, staData[0].lat, staData[0].lon) };
 
-  /* (a) Binary search "menuruni" fungsi jarak.
-     Pada jalur yang monoton, jarak ke titik membentuk kurva berbentuk-V
-     (turun lalu naik). Kita cari titik minimumnya. */
+  if (n === 0) return { index: 0, dist: 999999 };
+  if (n === 1) {
+    return {
+      index: 0,
+      dist: distance(posLat, posLon, staData[0].lat, staData[0].lon)
+    };
+  }
+
   let lo = 0, hi = n - 1;
+
   while (hi - lo > 1) {
     let mid = (lo + hi) >> 1;
     let dMid  = distance(posLat, posLon, staData[mid].lat, staData[mid].lon);
     let dNext = distance(posLat, posLon, staData[mid + 1].lat, staData[mid + 1].lon);
+
     if (dMid < dNext) {
-      hi = mid;      /* minimum ada di kiri (termasuk mid) */
+      hi = mid;
     } else {
-      lo = mid + 1;  /* minimum ada di kanan */
+      lo = mid + 1;
     }
   }
 
-  /* (b) Kandidat kasar = lo (atau hi). Periksa tetangga untuk kepastian. */
   let center = lo;
   let from = Math.max(0, center - NEIGHBOR_CHECK);
   let to   = Math.min(n - 1, center + NEIGHBOR_CHECK);
 
   let min = 999999, idx = center;
+
   for (let i = from; i <= to; i++) {
     let d = distance(posLat, posLon, staData[i].lat, staData[i].lon);
-    if (d < min) { min = d; idx = i; }
+
+    if (d < min) {
+      min = d;
+      idx = i;
+    }
   }
 
   dbg.search = "binary @" + idx;
@@ -327,35 +590,34 @@ function findNearestIndex(posLat, posLon) {
 
 /* =====================================
 DETECT DIRECTION
-<<< FIX 2: pakai tren selisih berurutan (jumlah tanda), bukan hanya
-first-vs-last, agar tahan terhadap spike & berhenti-jalan.
 ===================================== */
 function detectDirection() {
   if (staHistory.length < 4) return;
 
-  /* Jumlahkan arah tiap langkah; abaikan langkah yang terlalu kecil (diam). */
   let trend = 0;
+
   for (let i = 1; i < staHistory.length; i++) {
     let step = staHistory[i] - staHistory[i - 1];
+
     if (step > 1) trend++;
     else if (step < -1) trend--;
   }
 
-  /* Butuh dominasi arah yang jelas relatif jumlah langkah. */
   let net = staHistory[staHistory.length - 1] - staHistory[0];
   let detectedJalur = null;
 
   if (trend >= 2 && net >= MIN_DIRECTION_DELTA) {
-    detectedJalur = "Jalur A";   /* Menuju Merak (STA naik) */
+    detectedJalur = "Jalur A";
   } else if (trend <= -2 && net <= -MIN_DIRECTION_DELTA) {
-    detectedJalur = "Jalur B";   /* Menuju Tangerang (STA turun) */
+    detectedJalur = "Jalur B";
   } else {
-    return;                      /* ambigu / diam -> jangan ubah lock */
+    return;
   }
 
   if (lockedJalur === null) {
     if (detectedJalur === pendingJalur) {
       directionConfirmCount++;
+
       if (directionConfirmCount >= DIRECTION_LOCK_COUNT) {
         lockedJalur = detectedJalur;
         directionConfirmCount = 0;
@@ -369,6 +631,7 @@ function detectDirection() {
     if (detectedJalur !== lockedJalur) {
       if (detectedJalur === pendingJalur) {
         directionConfirmCount++;
+
         if (directionConfirmCount >= DIRECTION_CHANGE_COUNT) {
           lockedJalur = detectedJalur;
           directionConfirmCount = 0;
@@ -386,14 +649,19 @@ function detectDirection() {
 }
 
 /* =====================================
-SET STALE (data basi)
+STALE / WARNING
 ===================================== */
 function setStale(message, isWarn) {
-  let staEl = document.getElementById("sta");
-  staEl.classList.add("stale");
-  let st = document.getElementById("status");
-  st.className = "status" + (isWarn ? " warn" : "");
-  st.innerHTML = message;
+  document.getElementById("sta").classList.add("stale");
+
+  if (message.includes("Outside Alignment")) {
+    setSystemStatus("STA TIDAK DIGUNAKAN", "error");
+    setRouteState("OFF ROUTE", "error");
+  } else if (isWarn) {
+    setSystemStatus(message, "error");
+  } else {
+    setSystemStatus(message, "warn");
+  }
 }
 
 function clearStale() {
@@ -401,22 +669,23 @@ function clearStale() {
 }
 
 /* =====================================
-FIND STA + tampilkan
+FIND STA + DISPLAY
 ===================================== */
 function findSTA(posLat, posLon, t) {
 
-  let res = findNearestIndex(posLat, posLon);   /* <<< FIX 1 */
+  let res = findNearestIndex(posLat, posLon);
   let index = res.index;
   let min = res.dist;
   let p1 = staData[index];
 
   dbg.offset = min;
 
-  /* OFF ROUTE VALIDATION */
   if (min > MAX_OFFSET) {
     offRouteCounter++;
+    setRouteState("VALIDATING ROUTE", "warn");
   } else {
     offRouteCounter = 0;
+    setRouteState("ON ROUTE", "ok");
   }
 
   if (offRouteCounter >= 3) {
@@ -425,10 +694,8 @@ function findSTA(posLat, posLon, t) {
     return;
   }
 
-  /* <<< FIX 4: jangan cemari buffer arah dengan match yang jauh.
-     Hanya update history & simpan konteks bila offset masih wajar. */
   if (min <= MAX_OFFSET) {
-    lastIndex = index;                 /* konteks terakhir (opsional) */
+    lastIndex = index;
 
     staHistory.push(p1.sta);
     if (staHistory.length > HISTORY_SIZE) staHistory.shift();
@@ -440,40 +707,51 @@ function findSTA(posLat, posLon, t) {
     lastGoodTime = t;
   }
 
-  /* DISPLAY */
   clearStale();
-  document.getElementById("sta").innerHTML = formatSTA(p1.sta);
-  document.getElementById("offset").innerHTML = "Offset " + min.toFixed(1) + " m";
-  document.getElementById("segment").innerHTML = p1.segment;
-  document.getElementById("jalur").innerHTML =
-    lockedJalur !== null ? lockedJalur : "Detecting Direction...";
 
-  let st = document.getElementById("status");
-  st.className = "status ok";
-  st.innerHTML = "GPS Active";
+  document.getElementById("sta").textContent = formatSTA(p1.sta);
+  document.getElementById("offset").textContent = min.toFixed(1) + " m";
+  document.getElementById("segment").textContent = p1.segment;
+
+  updateJalurUI();
+
+  setSystemStatus("GPS READY", "ok");
 
   updateDebug(t);
 }
 
 /* =====================================
-<<< FIX 8: update panel debug
+DEBUG
 ===================================== */
 function updateDebug(t) {
   let d = document.getElementById("debug");
   if (!d.classList.contains("show")) return;
-  document.getElementById("dAcc").innerHTML    = dbg.acc != null ? dbg.acc.toFixed(0) : "-";
-  document.getElementById("dSpeed").innerHTML  = dbg.speed != null ? (dbg.speed * 3.6).toFixed(0) : "-";
-  document.getElementById("dOffset").innerHTML = dbg.offset != null ? dbg.offset.toFixed(1) : "-";
-  document.getElementById("dLead").innerHTML   = dbg.lead.toFixed(1);
-  document.getElementById("dSmooth").innerHTML = GPS_SMOOTHING;
-  document.getElementById("dSearch").innerHTML = dbg.search;
-  document.getElementById("dAge").innerHTML    = lastGoodTime ? (Date.now() - lastGoodTime) : "-";
+
+  document.getElementById("dAcc").textContent =
+    dbg.acc != null ? dbg.acc.toFixed(0) : "-";
+
+  document.getElementById("dSpeed").textContent =
+    dbg.speed != null ? (dbg.speed * 3.6).toFixed(0) : "-";
+
+  document.getElementById("dOffset").textContent =
+    dbg.offset != null ? dbg.offset.toFixed(1) : "-";
+
+  document.getElementById("dLead").textContent = dbg.lead.toFixed(1);
+  document.getElementById("dSmooth").textContent = GPS_SMOOTHING;
+  document.getElementById("dSearch").textContent = dbg.search;
+
+  document.getElementById("dAge").textContent =
+    lastGoodTime ? (Date.now() - lastGoodTime) : "-";
 }
 
 document.getElementById("debugToggle").addEventListener("click", function () {
   let d = document.getElementById("debug");
   d.classList.toggle("show");
-  this.innerHTML = d.classList.contains("show") ? "sembunyikan info teknis" : "tampilkan info teknis";
+
+  this.textContent =
+    d.classList.contains("show")
+      ? "sembunyikan info teknis"
+      : "tampilkan info teknis";
 });
 
 /* =====================================
@@ -481,8 +759,9 @@ WATCHDOG
 ===================================== */
 setInterval(function () {
   if (lastGoodTime === 0) return;
+
   if (Date.now() - lastGoodTime > STALE_AFTER) {
-    setStale("Menunggu GPS… (data terakhir mungkin tertinggal)", false);
+    setStale("Menunggu GPS… data terakhir mungkin tertinggal", false);
   }
 }, 1000);
 
@@ -492,7 +771,7 @@ START GPS
 function startGPS() {
 
   if (!navigator.geolocation) {
-    document.getElementById("status").innerHTML = "GPS tidak didukung browser";
+    setSystemStatus("GPS TIDAK DIDUKUNG BROWSER", "error");
     return;
   }
 
@@ -502,19 +781,23 @@ function startGPS() {
 
       let now = Date.now();
       let acc = pos.coords.accuracy;
-      dbg.acc = acc;                                   /* <<< FIX 8 */
 
-      /* GPS ACCURACY FILTER */
+      dbg.acc = acc;
+      document.getElementById("accuracyMain").textContent = acc.toFixed(0) + " m";
+
       if (acc > MAX_GPS_ACCURACY) {
+        setSystemStatus("GPS BELUM SIAP · akurasi " + acc.toFixed(0) + " m", "warn");
+
         if (now - lastGoodTime > STALE_AFTER) {
           setStale("Poor GPS (" + acc.toFixed(0) + " m)", false);
         }
+
         return;
       }
 
-      /* SMOOTHING adaptif terhadap kecepatan */
-      let speed = pos.coords.speed; /* m/s */
-      dbg.speed = speed;                               /* <<< FIX 8 */
+      let speed = pos.coords.speed;
+      dbg.speed = speed;
+
       if (speed !== null && speed !== undefined) {
         if (speed > 15) GPS_SMOOTHING = 1;
         else if (speed > 5) GPS_SMOOTHING = 2;
@@ -523,40 +806,47 @@ function startGPS() {
         GPS_SMOOTHING = 2;
       }
 
-      gpsHistory.push({ lat: pos.coords.latitude, lon: pos.coords.longitude, t: now });
-      while (gpsHistory.length > GPS_SMOOTHING) gpsHistory.shift();
+      gpsHistory.push({
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        t: now
+      });
+
+      while (gpsHistory.length > GPS_SMOOTHING) {
+        gpsHistory.shift();
+      }
 
       let lat = 0, lon = 0;
-      gpsHistory.forEach(p => { lat += p.lat; lon += p.lon; });
+
+      gpsHistory.forEach(p => {
+        lat += p.lat;
+        lon += p.lon;
+      });
+
       lat /= gpsHistory.length;
       lon /= gpsHistory.length;
 
-      /* =====================================
-      EKSTRAPOLASI MAJU
-      <<< FIX 6: lead dikaitkan ke kecepatan aktual & dibatasi
-      MAX_LEAD_METERS, bukan konstanta 0.4 dtk.
-      ===================================== */
       let projLat = lat, projLon = lon;
       dbg.lead = 0;
 
       if (gpsHistory.length >= 2) {
         let a = gpsHistory[gpsHistory.length - 2];
         let b = gpsHistory[gpsHistory.length - 1];
-        let dt = (b.t - a.t) / 1000; /* detik */
+        let dt = (b.t - a.t) / 1000;
 
         if (dt > 0 && dt < 3) {
           let vLat = (b.lat - a.lat) / dt;
           let vLon = (b.lon - a.lon) / dt;
 
-          /* lead waktu dasar ~0.4 dtk + kompensasi setengah interval throttle */
           let leadTime = 0.4 + (UPDATE_INTERVAL / 1000) / 2;
 
-          /* jarak proyeksi = kecepatan * waktu; batasi maksimum */
           let projDist = (speed && speed > 0 ? speed : 0) * leadTime;
+
           if (projDist > MAX_LEAD_METERS) {
             leadTime = leadTime * (MAX_LEAD_METERS / projDist);
             projDist = MAX_LEAD_METERS;
           }
+
           dbg.lead = projDist;
 
           projLat = b.lat + vLat * leadTime;
@@ -564,7 +854,6 @@ function startGPS() {
         }
       }
 
-      /* DISPLAY THROTTLE */
       if (now - lastDisplayUpdate < UPDATE_INTERVAL) return;
       lastDisplayUpdate = now;
 
@@ -572,22 +861,28 @@ function startGPS() {
     },
 
     function (err) {
-      let msg = "GPS Error";
-      if (err.code === 1) msg = "GPS: Izin ditolak";
-      else if (err.code === 2) msg = "GPS: Sinyal tidak tersedia";
-      else if (err.code === 3) msg = "GPS: Timeout";
+      let msg = "GPS ERROR";
+
+      if (err.code === 1) msg = "IZIN LOKASI DITOLAK";
+      else if (err.code === 2) msg = "SINYAL GPS TIDAK TERSEDIA";
+      else if (err.code === 3) msg = "GPS TIMEOUT";
+
       setStale(msg, true);
     },
 
-    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    {
+      enableHighAccuracy: true,
+      timeout: 5000,
+      maximumAge: 0
+    }
   );
 }
 
 /* =====================================
 LOAD CSV
-<<< FIX 7: split CRLF-safe, buang baris kosong, validasi lat/lon NaN.
 ===================================== */
-document.getElementById("status").innerHTML = "Loading data...";
+setSystemStatus("MEMUAT DATABASE...", "idle");
+setRouteState("Menunggu database", "idle");
 
 fetch("STA_Tamer.csv?nocache=" + Date.now())
   .then(r => {
@@ -595,19 +890,21 @@ fetch("STA_Tamer.csv?nocache=" + Date.now())
     return r.text();
   })
   .then(text => {
-    let rows = text.split(/\r?\n/).slice(1);          /* <<< FIX 7: CRLF-safe */
+
+    let rows = text.split(/\r?\n/).slice(1);
     let loadCount = 0;
 
     rows.forEach(r => {
       let line = r.trim();
-      if (line === "") return;                         /* <<< FIX 7: skip kosong */
+      if (line === "") return;
+
       let c = line.split(",");
       if (c.length < 4) return;
 
       let sta = parseFloat(c[0]);
       let la  = parseFloat(c[1]);
       let lo  = parseFloat(c[2]);
-      /* <<< FIX 7: validasi ketiga angka */
+
       if (isNaN(sta) || isNaN(la) || isNaN(lo)) return;
 
       staData.push({
@@ -616,28 +913,28 @@ fetch("STA_Tamer.csv?nocache=" + Date.now())
         lon: lo,
         segment: c[3].trim()
       });
+
       loadCount++;
     });
 
     if (loadCount === 0) {
-      document.getElementById("status").innerHTML = "Data kosong / format salah";
+      setSystemStatus("DATABASE KOSONG / FORMAT SALAH", "error");
       return;
     }
 
-    /* <<< FIX 1 (pendukung): pastikan data urut menaik agar pencarian
-       lokal & deteksi arah konsisten. */
     staData.sort((x, y) => x.sta - y.sta);
 
-    document.getElementById("status").innerHTML = "GPS Ready (" + loadCount + " titik)";
+    setSystemStatus("MENUNGGU POSISI GPS...", "idle");
+    setRouteState(loadCount.toLocaleString("id-ID") + " titik siap", "idle");
+
     startGPS();
   })
   .catch(err => {
-    document.getElementById("status").innerHTML = "Gagal load data: " + err.message;
+    setSystemStatus("GAGAL MEMUAT DATABASE", "error");
+    setRouteState(err.message, "error");
     console.error("CSV load error:", err);
   });
 
 </script>
-
 </body>
-
 </html>
